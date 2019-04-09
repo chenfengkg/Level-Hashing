@@ -77,7 +77,7 @@ uint64_t string_key_hash_computation(const void *data, uint64_t length, uint64_t
             p += 8;
             v4 = shifting_hash(v4, 31);
             v4 *= NUMBER64_1;
-        } while (p <= limitation);
+        } while (p <= limitation);//compare address not value
 
         hash = shifting_hash(v1, 1) + shifting_hash(v2, 7) + shifting_hash(v3, 12) + shifting_hash(v4, 18);
 

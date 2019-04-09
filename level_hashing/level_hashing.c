@@ -20,7 +20,7 @@ uint64_t S_HASH(level_hash *level, const uint8_t *key) {
 Function: F_IDX() 
         Compute the second hash location
 */
-uint64_t F_IDX(uint64_t hashKey, uint64_t capacity) {
+uint64_t F_IDX(uint64_t hashKey, uint64_t capacity) { //前半部
     return hashKey % (capacity / 2);
 }
 
@@ -28,7 +28,7 @@ uint64_t F_IDX(uint64_t hashKey, uint64_t capacity) {
 Function: S_IDX() 
         Compute the second hash location
 */
-uint64_t S_IDX(uint64_t hashKey, uint64_t capacity) {
+uint64_t S_IDX(uint64_t hashKey, uint64_t capacity) {//后半部
     return hashKey % (capacity / 2) + capacity / 2;
 }
 
@@ -203,11 +203,11 @@ void level_shrink(level_hash *level)
     level->buckets[1] = newBuckets;
     newBuckets = NULL;
 
-    level->level_item_num[0] = level->level_item_num[1];
+    level->level_item_num[0] = level->level_item_num[1];//当前级别数据数目
     level->level_item_num[1] = 0;
 
-    level->addr_capacity = pow(2, level->level_size);
-    level->total_capacity = pow(2, level->level_size) + pow(2, level->level_size - 1);
+    level->addr_capacity = pow(2, level->level_size);//地址容量，下面是备用桶
+    level->total_capacity = pow(2, level->level_size) + pow(2, level->level_size - 1);//总容量
 
     uint64_t old_idx, i;
     for (old_idx = 0; old_idx < pow(2, level->level_size+1); old_idx ++) {
@@ -224,9 +224,9 @@ void level_shrink(level_hash *level)
         }
     } 
 
-    free(interimBuckets);
-    level->level_expand_time = 0;
-    level->resize_state = 0;
+    free(interimBuckets);//释放当前级
+    level->level_expand_time = 0;//扩展次数，收缩后变为0
+    level->resize_state = 0;//1表示expand,2表示收缩
 }
 
 /*
@@ -432,7 +432,7 @@ uint8_t level_insert(level_hash *level, uint8_t *key, uint8_t *value)
         f_idx = F_IDX(f_hash, level->addr_capacity / 2);
         s_idx = S_IDX(s_hash, level->addr_capacity / 2);
     }
-
+    //两级桶都没有空闲位置
     f_idx = F_IDX(f_hash, level->addr_capacity);
     s_idx = S_IDX(s_hash, level->addr_capacity);
     
@@ -448,8 +448,9 @@ uint8_t level_insert(level_hash *level, uint8_t *key, uint8_t *value)
         s_idx = S_IDX(s_hash, level->addr_capacity/2);        
     }
     
+    //通过一次移动（驱逐）也找不到位置
     if(level->level_expand_time > 0){
-        empty_location = b2t_movement(level, f_idx);
+        empty_location = b2t_movement(level, f_idx);//f_idx是在bottom_level
         if(empty_location != -1){
             memcpy(level->buckets[1][f_idx].slot[empty_location].key, key, KEY_LEN);
             memcpy(level->buckets[1][f_idx].slot[empty_location].value, value, VALUE_LEN);
@@ -458,7 +459,7 @@ uint8_t level_insert(level_hash *level, uint8_t *key, uint8_t *value)
             return 0;
         }
 
-        empty_location = b2t_movement(level, s_idx);
+        empty_location = b2t_movement(level, s_idx);//f_idx是在top_level
         if(empty_location != -1){
             memcpy(level->buckets[1][s_idx].slot[empty_location].key, key, KEY_LEN);
             memcpy(level->buckets[1][s_idx].slot[empty_location].value, value, VALUE_LEN);
@@ -487,6 +488,7 @@ uint8_t try_movement(level_hash *level, uint64_t idx, uint64_t level_num, uint8_
         uint64_t f_idx = F_IDX(f_hash, level->addr_capacity/(1+level_num));
         uint64_t s_idx = S_IDX(s_hash, level->addr_capacity/(1+level_num));
         
+        //找到另一个位置
         if(f_idx == idx)
             jdx = s_idx;
         else
